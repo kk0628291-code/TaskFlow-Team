@@ -24,7 +24,7 @@ const projectSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    // 👈 NOUVEAU : Liste des membres du projet (F4)
+    // 👈 Liste des membres du projet (F4)
     members: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

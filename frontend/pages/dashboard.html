@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        h1 {
+            font-size: 36px;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #c084fc;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+        .recent-tasks {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .recent-tasks h3 {
+            margin-bottom: 10px;
+            color: #c084fc;
+        }
+        .task-row {
+            background: rgba(255,255,255,0.03);
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .logout-btn {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+    </style>
+</head>
+<body>
+<div class="glass-card">
+    <h1>TaskFlow</h1>
+    <div class="user-info">
+        <p>Bienvenue, <strong id="userName"></strong></p>
+        <p id="userEmail" style="font-size: 12px; color: #94a3b8;"></p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="activeProjects">-</div>
+            <div class="stat-label">Projets actifs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="assignedTasks">-</div>
+            <div class="stat-label">Tâches assignées</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="completedTasks">-</div>
+            <div class="stat-label">Tâches terminées</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="lateTasks">-</div>
+            <div class="stat-label">Tâches en retard</div>
+        </div>
+    </div>
+
+    <div class="recent-tasks">
+        <h3>📋 Dernières tâches</h3>
+        <div id="recentTasksList">Chargement...</div>
+    </div>
+
+    <button class="btn" onclick="window.location.href='projects.html'">📁 Mes Projets</button>
+    <button class="btn" onclick="window.location.href='tasks.html'">📋 Mes Tâches</button>
+    <button class="btn logout-btn" onclick="logout()">🔓 Déconnexion</button>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:5000/api';
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token) window.location.href = 'auth.html';
+
+    document.getElementById('userName').textContent = user.fullName || user.email;
+    document.getElementById('userEmail').textContent = user.email;
+
+    async function loadDashboard() {
+        try {
+            const res = await axios.get(`${API_URL}/dashboard`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = res.data;
+            document.getElementById('activeProjects').innerText = data.activeProjects || 0;
+            document.getElementById('assignedTasks').innerText = data.assignedTasks || 0;
+            document.getElementById('completedTasks').innerText = data.completedTasks || 0;
+            document.getElementById('lateTasks').innerText = data.lateTasks || 0;
+
+            const container = document.getElementById('recentTasksList');
+            if (data.recentTasks && data.recentTasks.length) {
+                container.innerHTML = data.recentTasks.map(t => `
+                    <div class="task-row">
+                        <strong>${escapeHtml(t.title)}</strong>
+                        <span style="color:${t.status === 'terminé' ? '#34d399' : '#fbbf24'}">${t.status}</span>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p>Aucune tâche récente</p>';
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('recentTasksList').innerHTML = '<p>Erreur de chargement</p>';
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'auth.html';
+    }
+
+    loadDashboard();
+</script>
+</body>
+</html>
