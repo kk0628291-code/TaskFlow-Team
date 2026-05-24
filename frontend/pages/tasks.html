@@ -1,0 +1,711 @@
+<!-- frontend/tasks.html - Gestion des tâches -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Tâches</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f1a;
+            color: #f9fafb;
+        }
+        .navbar {
+            background: rgba(18, 18, 30, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo h2 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        .nav-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            color: #667eea;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header-section h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(18, 18, 30, 0.5);
+            border-radius: 16px;
+        }
+        .filter-select, .search-input {
+            padding: 10px 16px;
+            background: #0f0f1a;
+            border: 1.5px solid #2d2d3a;
+            border-radius: 12px;
+            color: #f9fafb;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 10px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .tasks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .task-card {
+            background: rgba(18, 18, 30, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+        }
+        .task-card:hover {
+            border-color: rgba(102,126,234,0.3);
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .task-title {
+            font-size: 17px;
+            font-weight: 600;
+        }
+        .priority-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .priority-haute { background: rgba(239,68,68,0.2); color: #f87171; }
+        .priority-moyenne { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .priority-basse { background: rgba(16,185,129,0.2); color: #34d399; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .status-à-faire { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .status-en-cours { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .status-terminé { background: rgba(16,185,129,0.2); color: #34d399; }
+        .task-info {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .icon-btn:hover { color: #667eea; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f0f1a;
+            border: 1.5px solid #2d2d3a;
+            border-radius: 12px;
+            color: #f9fafb;
+            font-family: 'Inter', sans-serif;
+        }
+        .draft-notice {
+            background: rgba(102,126,234,0.1);
+            border: 1px solid rgba(102,126,234,0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .page-btn {
+            padding: 8px 14px;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            border-radius: 8px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><h2>TaskFlow</h2></div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="projects.html">Projets</a>
+            <a href="tasks.html" class="active">Tâches</a>
+        </div>
+        <div class="user-info">
+            <span id="userName">Chargement...</span>
+            <div class="user-avatar"><i class="fas fa-user"></i></div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1><i class="fas fa-tasks"></i> Gestion des tâches</h1>
+            <button class="btn-primary" onclick="openTaskModal()">
+                <i class="fas fa-plus"></i> Nouvelle tâche
+            </button>
+        </div>
+
+        <div class="filters-bar">
+            <select id="filterStatus" class="filter-select" onchange="loadTasks()">
+                <option value="">Tous les statuts</option>
+                <option value="à faire">À faire</option>
+                <option value="en cours">En cours</option>
+                <option value="terminé">Terminé</option>
+            </select>
+            <select id="filterPriority" class="filter-select" onchange="loadTasks()">
+                <option value="">Toutes priorités</option>
+                <option value="basse">Basse</option>
+                <option value="moyenne">Moyenne</option>
+                <option value="haute">Haute</option>
+            </select>
+            <select id="filterAssignee" class="filter-select" onchange="loadTasks()">
+                <option value="">Tous les membres</option>
+            </select>
+            <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par titre..." onkeyup="debouncedLoad()">
+        </div>
+
+        <div id="projectInfo" style="margin-bottom: 20px;"></div>
+
+        <div class="tasks-grid" id="tasksList">
+            <div class="loading">Chargement des tâches...</div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Modal Tâche -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nouvelle tâche</h3>
+                <button class="close-modal" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div id="draftNotice" class="draft-notice">
+                <i class="fas fa-save"></i> Un brouillon sauvegardé a été trouvé. 
+                <button onclick="restoreDraft()" class="btn-secondary" style="margin-left: 10px;">Restaurer</button>
+                <button onclick="clearDraft()" class="btn-secondary">Ignorer</button>
+            </div>
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <label>Titre *</label>
+                    <input type="text" id="taskTitle" required placeholder="Titre de la tâche">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="taskDesc" rows="3" placeholder="Description..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priorité</label>
+                    <select id="taskPriority">
+                        <option value="basse">Basse</option>
+                        <option value="moyenne">Moyenne</option>
+                        <option value="haute">Haute</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select id="taskStatus">
+                        <option value="à faire">À faire</option>
+                        <option value="en cours">En cours</option>
+                        <option value="terminé">Terminé</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assigner à</label>
+                    <select id="taskAssignee">
+                        <option value="">Non assigné</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date limite</label>
+                    <input type="date" id="taskDeadline">
+                </div>
+                <div class="form-group">
+                    <label>Projet *</label>
+                    <select id="taskProject" required>
+                        <option value="">Sélectionner un projet</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let currentProjectId = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let debounceTimer;
+        let projectsList = [];
+        let membersList = [];
+
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        axios.interceptors.request.use(config => {
+            config.headers.Authorization = `Bearer ${token}`;
+            return config;
+        });
+
+        async function loadUser() {
+            try {
+                const res = await axios.get(`${API_URL}/auth/me`);
+                document.getElementById('userName').textContent = res.data.user.fullName || res.data.user.email;
+            } catch (error) {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function loadProjectsForSelect() {
+            try {
+                const res = await axios.get(`${API_URL}/projects?page=1&limit=100`);
+                projectsList = res.data.data || [];
+                const select = document.getElementById('taskProject');
+                select.innerHTML = '<option value="">Sélectionner un projet</option>' + 
+                    projectsList.map(p => `<option value="${p._id}">${escapeHtml(p.title)}</option>`).join('');
+            } catch (error) {
+                console.error('Erreur chargement projets:', error);
+            }
+        }
+
+        async function loadMembersForProject(projectId) {
+            try {
+                const res = await axios.get(`${API_URL}/projects/${projectId}/members`);
+                membersList = res.data || [];
+                const select = document.getElementById('taskAssignee');
+                select.innerHTML = '<option value="">Non assigné</option>' + 
+                    membersList.map(m => `<option value="${m._id}">${escapeHtml(m.fullName || m.email)} ${m.isOwner ? '(Propriétaire)' : ''}</option>`).join('');
+            } catch (error) {
+                console.error('Erreur chargement membres:', error);
+            }
+        }
+
+        async function loadTasks() {
+            const projectId = new URLSearchParams(window.location.search).get('project');
+            const projectFilter = projectId || currentProjectId;
+            
+            if (!projectFilter) {
+                document.getElementById('tasksList').innerHTML = '<div class="loading">Sélectionnez un projet depuis la page Projets</div>';
+                return;
+            }
+            
+            currentProjectId = projectFilter;
+            
+            const status = document.getElementById('filterStatus').value;
+            const priority = document.getElementById('filterPriority').value;
+            const assignedTo = document.getElementById('filterAssignee').value;
+            const search = document.getElementById('searchInput').value;
+            
+            try {
+                const res = await axios.get(`${API_URL}/projects/${currentProjectId}/tasks`, {
+                    params: { status, priority, assignedTo, search, page: currentPage, limit: 8 }
+                });
+                
+                const { data, totalPages: pages, page } = res.data;
+                totalPages = pages;
+                currentPage = page;
+                
+                const project = projectsList.find(p => p._id === currentProjectId);
+                document.getElementById('projectInfo').innerHTML = `<div class="filters-bar" style="background: rgba(102,126,234,0.1);"><strong>Projet actuel :</strong> ${escapeHtml(project?.title || 'Chargement...')}</div>`;
+                
+                const container = document.getElementById('tasksList');
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Aucune tâche dans ce projet</div>';
+                } else {
+                    container.innerHTML = data.map(task => `
+                        <div class="task-card">
+                            <div class="task-header">
+                                <div class="task-title">${escapeHtml(task.title)}</div>
+                                <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+                            </div>
+                            <div class="task-description" style="font-size: 13px; color: #9ca3af;">${escapeHtml(task.description?.substring(0, 100) || '')}</div>
+                            <div>
+                                <span class="status-badge status-${task.status.replace(/ /g, '-')}">${task.status}</span>
+                            </div>
+                            <div class="task-info">
+                                <div><i class="fas fa-user"></i> Assigné à: ${task.assignedTo?.fullName || task.assignedTo?.email || 'Non assigné'}</div>
+                                ${task.deadline ? `<div><i class="far fa-calendar"></i> Échéance: ${new Date(task.deadline).toLocaleDateString()}</div>` : ''}
+                            </div>
+                            <div class="task-actions">
+                                <select onchange="updateTaskStatus('${task._id}', this.value)" class="btn-secondary">
+                                    <option value="à faire" ${task.status === 'à faire' ? 'selected' : ''}>À faire</option>
+                                    <option value="en cours" ${task.status === 'en cours' ? 'selected' : ''}>En cours</option>
+                                    <option value="terminé" ${task.status === 'terminé' ? 'selected' : ''}>Terminé</option>
+                                </select>
+                                <button class="icon-btn" onclick="editTask('${task._id}')"><i class="fas fa-edit"></i></button>
+                                <button class="icon-btn" onclick="deleteTask('${task._id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                renderPagination();
+                loadFilterMembers();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('tasksList').innerHTML = '<div class="loading">Erreur de chargement</div>';
+            }
+        }
+
+        async function loadFilterMembers() {
+            if (currentProjectId) {
+                try {
+                    const res = await axios.get(`${API_URL}/projects/${currentProjectId}/members`);
+                    const select = document.getElementById('filterAssignee');
+                    select.innerHTML = '<option value="">Tous les membres</option>' + 
+                        res.data.map(m => `<option value="${m._id}">${escapeHtml(m.fullName || m.email)}</option>`).join('');
+                } catch (error) {}
+            }
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadTasks();
+        }
+
+        async function updateTaskStatus(taskId, status) {
+            try {
+                await axios.patch(`${API_URL}/tasks/${taskId}/status`, { status });
+                loadTasks();
+            } catch (error) {
+                alert('Erreur lors de la mise à jour du statut');
+            }
+        }
+
+        // Sauvegarde automatique des brouillons
+        function autoSaveDraft() {
+            const title = document.getElementById('taskTitle').value;
+            const desc = document.getElementById('taskDesc').value;
+            const priority = document.getElementById('taskPriority').value;
+            const status = document.getElementById('taskStatus').value;
+            const deadline = document.getElementById('taskDeadline').value;
+            const projectId = document.getElementById('taskProject').value;
+            const assignee = document.getElementById('taskAssignee').value;
+            
+            if (title || desc) {
+                const draft = { title, desc, priority, status, deadline, projectId, assignee, timestamp: Date.now() };
+                localStorage.setItem(`task_draft_${currentProjectId || 'global'}`, JSON.stringify(draft));
+            }
+        }
+
+        function checkForDraft() {
+            const draftKey = `task_draft_${currentProjectId || 'global'}`;
+            const draft = localStorage.getItem(draftKey);
+            if (draft) {
+                document.getElementById('draftNotice').style.display = 'block';
+                window.savedDraft = JSON.parse(draft);
+            } else {
+                document.getElementById('draftNotice').style.display = 'none';
+            }
+        }
+
+        function restoreDraft() {
+            if (window.savedDraft) {
+                document.getElementById('taskTitle').value = window.savedDraft.title || '';
+                document.getElementById('taskDesc').value = window.savedDraft.desc || '';
+                document.getElementById('taskPriority').value = window.savedDraft.priority || 'moyenne';
+                document.getElementById('taskStatus').value = window.savedDraft.status || 'à faire';
+                document.getElementById('taskDeadline').value = window.savedDraft.deadline || '';
+                if (window.savedDraft.projectId) {
+                    document.getElementById('taskProject').value = window.savedDraft.projectId;
+                    loadMembersForProject(window.savedDraft.projectId);
+                }
+                if (window.savedDraft.assignee) {
+                    setTimeout(() => {
+                        document.getElementById('taskAssignee').value = window.savedDraft.assignee;
+                    }, 500);
+                }
+                clearDraft();
+            }
+        }
+
+        function clearDraft() {
+            localStorage.removeItem(`task_draft_${currentProjectId || 'global'}`);
+            document.getElementById('draftNotice').style.display = 'none';
+            window.savedDraft = null;
+        }
+
+        function openTaskModal(task = null) {
+            clearDraft();
+            if (task) {
+                document.getElementById('modalTitle').textContent = 'Modifier la tâche';
+                document.getElementById('taskId').value = task._id;
+                document.getElementById('taskTitle').value = task.title;
+                document.getElementById('taskDesc').value = task.description || '';
+                document.getElementById('taskPriority').value = task.priority;
+                document.getElementById('taskStatus').value = task.status;
+                document.getElementById('taskDeadline').value = task.deadline ? task.deadline.split('T')[0] : '';
+                document.getElementById('taskProject').value = task.project._id || task.project;
+                loadMembersForProject(task.project._id || task.project);
+                setTimeout(() => {
+                    document.getElementById('taskAssignee').value = task.assignedTo?._id || task.assignedTo || '';
+                }, 300);
+            } else {
+                document.getElementById('modalTitle').textContent = 'Nouvelle tâche';
+                document.getElementById('taskForm').reset();
+                document.getElementById('taskId').value = '';
+                if (currentProjectId) {
+                    document.getElementById('taskProject').value = currentProjectId;
+                    loadMembersForProject(currentProjectId);
+                }
+                checkForDraft();
+            }
+            document.getElementById('taskModal').classList.add('active');
+            
+            // Activer auto-save
+            const inputs = ['taskTitle', 'taskDesc', 'taskPriority', 'taskStatus', 'taskDeadline', 'taskProject', 'taskAssignee'];
+            inputs.forEach(id => {
+                document.getElementById(id)?.addEventListener('input', autoSaveDraft);
+            });
+        }
+
+        async function editTask(id) {
+            try {
+                const res = await axios.get(`${API_URL}/tasks/${id}`);
+                openTaskModal(res.data);
+            } catch (error) {
+                alert('Erreur lors du chargement');
+            }
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('active');
+            clearDraft();
+        }
+
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('taskId').value;
+            const data = {
+                title: document.getElementById('taskTitle').value,
+                description: document.getElementById('taskDesc').value,
+                priority: document.getElementById('taskPriority').value,
+                status: document.getElementById('taskStatus').value,
+                deadline: document.getElementById('taskDeadline').value,
+                projectId: document.getElementById('taskProject').value,
+                assignedTo: document.getElementById('taskAssignee').value || null
+            };
+            
+            if (!data.title || !data.projectId) {
+                alert('Le titre et le projet sont requis');
+                return;
+            }
+            
+            try {
+                if (id) {
+                    await axios.put(`${API_URL}/tasks/${id}`, data);
+                } else {
+                    await axios.post(`${API_URL}/tasks`, data);
+                }
+                clearDraft();
+                closeTaskModal();
+                loadTasks();
+                loadProjectsForSelect();
+            } catch (error) {
+                alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
+            }
+        });
+
+        async function deleteTask(id) {
+            if (confirm('Supprimer cette tâche ?')) {
+                try {
+                    await axios.delete(`${API_URL}/tasks/${id}`);
+                    loadTasks();
+                } catch (error) {
+                    alert('Erreur lors de la suppression');
+                }
+            }
+        }
+
+        document.getElementById('taskProject').addEventListener('change', (e) => {
+            if (e.target.value) {
+                loadMembersForProject(e.target.value);
+            }
+        });
+
+        function debouncedLoad() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                currentPage = 1;
+                loadTasks();
+            }, 500);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadUser();
+        loadProjectsForSelect();
+        loadTasks();
+    </script>
+</body>
+</html>
