@@ -1,0 +1,473 @@
+<!-- frontend/projects.html - Gestion des projets -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Mes projets</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f1a;
+            color: #f9fafb;
+        }
+        .navbar {
+            background: rgba(18, 18, 30, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo h2 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        .nav-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            color: #667eea;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header-section h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102,126,234,0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 10px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        .project-card {
+            background: rgba(18, 18, 30, 0.95);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .project-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(102,126,234,0.3);
+        }
+        .project-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .project-description {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .project-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-actif { background: rgba(16,185,129,0.2); color: #34d399; }
+        .status-en-pause { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .status-archivé { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .project-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        .icon-btn:hover { color: #667eea; }
+        .icon-btn.danger:hover { color: #ef4444; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 { font-size: 22px; }
+        .close-modal {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f0f1a;
+            border: 1.5px solid #2d2d3a;
+            border-radius: 12px;
+            color: #f9fafb;
+            font-family: 'Inter', sans-serif;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .page-btn {
+            padding: 8px 14px;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            border-radius: 8px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><h2>TaskFlow</h2></div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="projects.html" class="active">Projets</a>
+            <a href="tasks.html">Tâches</a>
+        </div>
+        <div class="user-info">
+            <span id="userName">Chargement...</span>
+            <div class="user-avatar"><i class="fas fa-user"></i></div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <h1><i class="fas fa-folder"></i> Mes projets</h1>
+            <button class="btn-primary" onclick="openProjectModal()">
+                <i class="fas fa-plus"></i> Nouveau projet
+            </button>
+        </div>
+
+        <div class="projects-grid" id="projectsList">
+            <div class="loading">Chargement des projets...</div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Modal Projet -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nouveau projet</h3>
+                <button class="close-modal" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="projectForm">
+                <input type="hidden" id="projectId">
+                <div class="form-group">
+                    <label>Titre *</label>
+                    <input type="text" id="projectTitle" required placeholder="Nom du projet">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="projectDesc" rows="3" placeholder="Description du projet..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Date limite</label>
+                    <input type="date" id="projectDeadline">
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select id="projectStatus">
+                        <option value="actif">Actif</option>
+                        <option value="en pause">En pause</option>
+                        <option value="archivé">Archivé</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Vérifier auth
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        axios.interceptors.request.use(config => {
+            config.headers.Authorization = `Bearer ${token}`;
+            return config;
+        });
+
+        // Charger l'utilisateur
+        async function loadUser() {
+            try {
+                const res = await axios.get(`${API_URL}/auth/me`);
+                document.getElementById('userName').textContent = res.data.user.fullName || res.data.user.email;
+            } catch (error) {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Charger les projets
+        async function loadProjects(page = 1) {
+            try {
+                const res = await axios.get(`${API_URL}/projects?page=${page}&limit=9`);
+                const { data, totalPages: pages, page: current } = res.data;
+                totalPages = pages;
+                currentPage = current;
+                
+                const container = document.getElementById('projectsList');
+                if (data.length === 0) {
+                    container.innerHTML = '<div class="loading">Aucun projet. Créez votre premier projet !</div>';
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+                
+                container.innerHTML = data.map(project => `
+                    <div class="project-card">
+                        <div class="project-title">${escapeHtml(project.title)}</div>
+                        <div class="project-description">${escapeHtml(project.description || 'Aucune description')}</div>
+                        <div class="project-meta">
+                            <span class="status-badge status-${project.status}">${project.status}</span>
+                            <div class="project-actions">
+                                <button class="icon-btn" onclick="editProject('${project._id}')" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="icon-btn danger" onclick="deleteProject('${project._id}')" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="icon-btn" onclick="viewTasks('${project._id}')" title="Voir les tâches">
+                                    <i class="fas fa-tasks"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                renderPagination();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('projectsList').innerHTML = '<div class="loading">Erreur de chargement</div>';
+            }
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadProjects(${i})">${i}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // Créer/Modifier projet
+        function openProjectModal(project = null) {
+            if (project) {
+                document.getElementById('modalTitle').textContent = 'Modifier le projet';
+                document.getElementById('projectId').value = project._id;
+                document.getElementById('projectTitle').value = project.title;
+                document.getElementById('projectDesc').value = project.description || '';
+                document.getElementById('projectDeadline').value = project.deadline ? project.deadline.split('T')[0] : '';
+                document.getElementById('projectStatus').value = project.status;
+            } else {
+                document.getElementById('modalTitle').textContent = 'Nouveau projet';
+                document.getElementById('projectForm').reset();
+                document.getElementById('projectId').value = '';
+            }
+            document.getElementById('projectModal').classList.add('active');
+        }
+
+        async function editProject(id) {
+            try {
+                const res = await axios.get(`${API_URL}/projects/${id}`);
+                openProjectModal(res.data);
+            } catch (error) {
+                alert('Erreur lors du chargement du projet');
+            }
+        }
+
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.remove('active');
+        }
+
+        document.getElementById('projectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('projectId').value;
+            const data = {
+                title: document.getElementById('projectTitle').value,
+                description: document.getElementById('projectDesc').value,
+                deadline: document.getElementById('projectDeadline').value,
+                status: document.getElementById('projectStatus').value
+            };
+            
+            try {
+                if (id) {
+                    await axios.put(`${API_URL}/projects/${id}`, data);
+                } else {
+                    await axios.post(`${API_URL}/projects`, data);
+                }
+                closeProjectModal();
+                loadProjects(currentPage);
+            } catch (error) {
+                alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement');
+            }
+        });
+
+        // Supprimer projet
+        async function deleteProject(id) {
+            if (confirm('Supprimer ce projet ? Toutes les tâches seront également supprimées.')) {
+                try {
+                    await axios.delete(`${API_URL}/projects/${id}`);
+                    loadProjects(currentPage);
+                } catch (error) {
+                    alert('Erreur lors de la suppression');
+                }
+            }
+        }
+
+        function viewTasks(projectId) {
+            localStorage.setItem('currentProjectId', projectId);
+            window.location.href = `tasks.html?project=${projectId}`;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadUser();
+        loadProjects();
+    </script>
+</body>
+</html>
