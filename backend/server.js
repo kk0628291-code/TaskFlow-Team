@@ -18,9 +18,15 @@ mongoose.connect(process.env.MONGO_URI)
 const authRoutes = require('./src/routes/authRoutes');
 const projectRoutes = require('./src/routes/projectRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
+
 
 // Routes publiques
 app.use('/api/auth', authRoutes);
+app.use('/api/health', (req, res) => {
+    res.json({ status: 'OK', message: 'Serveur fonctionne' });
+    });
+
 
 // Middleware d'authentification
 const authMiddleware = require('./src/middleware/authMiddleware');
@@ -29,11 +35,7 @@ app.use(authMiddleware);
 // Routes protégées
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
-
-// Route de test
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Serveur fonctionne' });
-});
+app.use('/api/dashboard', dashboardRoutes);
 
 // Gestion 404
 app.use((req, res) => {
